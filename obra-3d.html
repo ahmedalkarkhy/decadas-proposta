@@ -197,6 +197,69 @@
         color: var(--sub);
         font-family: var(--mono);
       }
+      /* ---- mobile: headline top, obra centre, HUD bottom bar ---- */
+      @media (max-width: 760px) {
+        #stage::before {
+          content: "";
+          position: absolute;
+          inset: 0 0 auto 0;
+          height: 46%;
+          z-index: 2;
+          background: linear-gradient(
+            180deg,
+            rgba(10, 13, 20, 0.92),
+            rgba(10, 13, 20, 0.35) 70%,
+            transparent
+          );
+          pointer-events: none;
+        }
+        .copy {
+          top: 74px;
+          transform: none;
+          left: 20px;
+          right: 20px;
+          max-width: none;
+        }
+        h1 {
+          font-size: clamp(26px, 8vw, 38px);
+        }
+        .lead {
+          display: none;
+        }
+        .cta {
+          margin-top: 20px;
+        }
+        .hud {
+          top: auto;
+          bottom: 16px;
+          left: 12px;
+          right: 12px;
+          flex-direction: row;
+          justify-content: center;
+          align-items: stretch;
+          gap: 8px;
+        }
+        .chip {
+          min-width: 0;
+          flex: 1;
+          padding: 9px 10px;
+          text-align: center;
+        }
+        .chip .v {
+          font-size: 17px;
+        }
+        .chip .k {
+          font-size: 9px;
+          letter-spacing: 0.08em;
+        }
+        .safe {
+          justify-content: center;
+          font-size: 10px;
+        }
+        .hint {
+          display: none;
+        }
+      }
     </style>
   </head>
   <body>
@@ -275,6 +338,9 @@
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
         renderer.setClearColor(0x000000, 0);
 
+        let isMobile = window.matchMedia("(max-width: 760px)").matches;
+        const startTime = performance.now();
+
         const scene = new THREE.Scene();
         scene.fog = new THREE.Fog(0x0a0d14, 26, 62);
 
@@ -347,7 +413,7 @@
           D = 6,
           FH = 1.8; // footprint + floor height
         const building = new THREE.Group();
-        building.position.x = 2.4;
+        building.position.x = isMobile ? 0 : 2.4;
         scene.add(building);
         // foundation pad (always visible)
         const basePad = new THREE.Mesh(
@@ -484,6 +550,7 @@
         );
         hook.position.set(7, -3, 0);
         top.add(hook);
+        crane.visible = !isMobile;
 
         // ---- interaction / scroll ----
         let progress = 0,
@@ -509,6 +576,12 @@
             renderer.setSize(w, h, false);
           camera.aspect = w / h;
           camera.updateProjectionMatrix();
+          const nowMobile = window.matchMedia("(max-width: 760px)").matches;
+          if (nowMobile !== isMobile) {
+            isMobile = nowMobile;
+            building.position.x = isMobile ? 0 : 2.4;
+            crane.visible = !isMobile;
+          }
         }
 
         function easeInOut(t) {
@@ -528,23 +601,34 @@
         function tick() {
           if (!running) return;
           resize();
+          if (isMobile) {
+            // auto-build over ~4.5s, then hold (no scroll dependency)
+            target = Math.min((performance.now() - startTime) / 4500, 1);
+          }
           progress += (target - progress) * 0.08; // smooth follow
 
           // camera orbit + settle
           const p = easeInOut(Math.min(progress / 0.95, 1));
-          const ang = -0.9 + p * 0.5;
-          const rad = 20 - p * 4;
-          const camY = 7 + p * 5;
-          camera.position.set(
-            Math.sin(ang) * rad + 2.4,
-            camY,
-            Math.cos(ang) * rad,
-          );
-          camera.lookAt(
-            2.4,
-            Math.min(2 + p * (FLOORS * FH) * 0.42, FLOORS * FH * 0.5),
-            0,
-          );
+          if (isMobile) {
+            const ang = -0.44;
+            const rad = 22;
+            camera.position.set(Math.sin(ang) * rad, 6.4, Math.cos(ang) * rad);
+            camera.lookAt(0, 5.4, 0);
+          } else {
+            const ang = -0.9 + p * 0.5;
+            const rad = 20 - p * 4;
+            const camY = 7 + p * 5;
+            camera.position.set(
+              Math.sin(ang) * rad + 2.4,
+              camY,
+              Math.cos(ang) * rad,
+            );
+            camera.lookAt(
+              2.4,
+              Math.min(2 + p * (FLOORS * FH) * 0.42, FLOORS * FH * 0.5),
+              0,
+            );
+          }
 
           // reveal floors up to buildProgress (starts with 2 floors visible, grows to all)
           const START_FLOORS = 2;
