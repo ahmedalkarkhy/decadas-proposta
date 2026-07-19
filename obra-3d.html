@@ -259,10 +259,7 @@
           return false;
         }
       }
-      if (
-        !webglOK() ||
-        (prefersReduced && !location.hash.includes("force3d"))
-      ) {
+      if (!webglOK()) {
         canvas.style.display = "none";
         fallback.style.display = "flex";
       } else {
@@ -549,8 +546,11 @@
             0,
           );
 
-          // reveal floors up to buildProgress
-          const build = Math.min(progress / 0.86, 1) * FLOORS; // 0..FLOORS
+          // reveal floors up to buildProgress (starts with 2 floors visible, grows to all)
+          const START_FLOORS = 2;
+          const build =
+            START_FLOORS +
+            Math.min(progress / 0.86, 1) * (FLOORS - START_FLOORS);
           let doneFloors = 0;
           for (let i = 0; i < FLOORS; i++) {
             const local = Math.min(Math.max(build - i, 0), 1); // 0..1 appear for floor i
